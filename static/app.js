@@ -303,6 +303,26 @@ async function renderSettings() {
   });
 }
 
+async function loadNotes() {
+  const box = document.querySelector("#note-list");
+  const data = await api(`/api/notes?coin=${encodeURIComponent(coin)}`);
+  box.innerHTML = "";
+  if (!data.notes.length) {
+    box.innerHTML = `<p class="muted">メモはまだありません</p>`;
+    return;
+  }
+  data.notes.forEach((note) => {
+    const row = document.createElement("article");
+    row.className = "signal";
+    row.innerHTML = `<p>${escapeHtml(note.body)}</p><button type="button" class="ghost" data-id="${note.id}">削除</button>`;
+    row.querySelector("button").addEventListener("click", async () => {
+      await api(`/api/notes?id=${note.id}`, { method: "DELETE" });
+      loadNotes();
+    });
+    box.appendChild(row);
+  });
+}
+
 async function renderDetail() {
   app.innerHTML = `<p class="muted">読み込み中</p>`;
   const data = await api(`/api/coin?coin=${encodeURIComponent(coin)}&tf=${encodeURIComponent(timeframe)}`);
@@ -333,6 +353,12 @@ async function renderDetail() {
         <div id="indicator-list"></div>
         <h2>オブジェクト</h2>
         <div id="object-list"></div>
+        <h2>メモ</h2>
+        <form id="note-form">
+          <input id="note-body" maxlength="200" placeholder="この銘柄のメモ">
+          <button class="primary" type="submit">登録</button>
+        </form>
+        <div id="note-list"></div>
       </section>
     </div>`;
   document.querySelector("#back").addEventListener("click", () => {
@@ -374,6 +400,18 @@ async function renderDetail() {
   if (!objects.children.length) {
     objects.innerHTML = `<p class="muted empty-object">検出されたオブジェクトはありません</p>`;
   }
+  document.querySelector("#note-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const body = document.querySelector("#note-body").value.trim();
+    if (!body) return;
+    await api("/api/notes", {
+      method: "POST",
+      body: JSON.stringify({ coin, body }),
+    });
+    document.querySelector("#note-body").value = "";
+    loadNotes();
+  });
+  loadNotes();
 }
 
 function chartOptions(height) {
