@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>仮想通貨テクニカルトレーナー</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://unpkg.com/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div>
+      <p class="eyebrow">Hyperliquid 先物 · 確定足</p>
+      <h1>仮想通貨テクニカルトレーナー</h1>
+    </div>
+    <nav>
+      <button type="button" data-view="list" class="nav on">一覧</button>
+      <button type="button" data-view="guide" class="nav">図解</button>
+      <button type="button" data-view="settings" class="nav">設定</button>
+    </nav>
+  </header>
+  <main id="app"></main>
+  <footer>
+    <p>投資判断をするアプリではありません。価格は Hyperliquid の公開データで、数値の保証はありません。日足の区切りは UTC 0時（日本時間 9時）です。</p>
+    <p>広告枠はこの版では空です。チャートは <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a> Lightweight Charts を使っています。</p>
+  </footer>
+  <script src="/app.js"></script>
+</body>
+</html>
