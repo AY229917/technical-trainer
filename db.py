@@ -44,6 +44,12 @@ def init_db() -> None:
                 coin TEXT PRIMARY KEY,
                 first_seen TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                coin TEXT NOT NULL,
+                body TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
             """
         )
 
@@ -124,3 +130,29 @@ def latest_ranking(conn: sqlite3.Connection, limit: int) -> tuple[str | None, li
         (recorded, limit),
     ).fetchall()
     return recorded, [dict(row) for row in rows]
+
+def insert_note(conn: sqlite3.Connection, coin: str, body: str) -> int:
+    now = datetime.now(timezone.utc).isoformat()
+    cursor = conn.execute(
+        "INSERT INTO notes (coin, body, created_at) VALUES (?, ?, ?)",
+        (coin, body, now),
+    )
+    return int(cursor.lastrowid)
+
+
+def list_notes(conn: sqlite3.Connection, coin: str) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT id, coin, body, created_at
+        FROM notes
+        WHERE coin = ?
+        ORDER BY id DESC
+        """,
+        (coin,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def delete_note(conn: sqlite3.Connection, note_id: int) -> int:
+    cursor = conn.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+    return cursor.rowcount

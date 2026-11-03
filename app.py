@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from config import Settings, load_settings, save_settings
-from db import connect, init_db, latest_ranking, latest_recorded_at
+from db import connect, init_db, latest_ranking, latest_recorded_at, insert_note, list_notes, delete_note
 from engine import coin_payload, ranking_payload, start_update, STATUS
 
 ROOT = Path(__file__).resolve().parent
@@ -59,6 +59,16 @@ class Handler(BaseHTTPRequestHandler):
             if parsed.path == "/api/settings":
                 self._json(asdict(load_settings()))
                 return
+            if parsed.path == "/api/notes":
+                coin = (query.get("coin") or [""])[0].strip()
+                if not coin:
+                    self._json({"error": "銘柄がありません"}, 400)
+                    return
+                with connect() as conn:
+                    notes = list_notes(conn, coin)
+                self._json({"notes": notes})
+                return
+        
             if parsed.path == "/api/coin":
                 coin = (query.get("coin") or [""])[0]
                 timeframe = (query.get("tf") or ["1d"])[0]
@@ -101,10 +111,47 @@ class Handler(BaseHTTPRequestHandler):
                 save_settings(Settings(**{**asdict(load_settings()), **asdict(current)}))
                 self._json(asdict(load_settings()))
                 return
+            if parsed.path == "/api/notes":
+                incoming = self._read_json()
+                coin = str(incoming.get("coin") or "").strip()
+                body = str(incoming.get("body") or "").strip()
+                if not coin or not body:
+                    self._json({"error": "銘柄と本文を入れてください"}, 400)
+                    return
+                if len(body) > 200:
+                    self._json({"error": "本文は200文字までです"}, 400)
+                    return
+                with connect() as conn:
+                    note_id = insert_note(conn, coin, body)
+                self._json({"id": note_id})
+                return
         except Exception as exc:  # noqa: BLE001
             self._json({"error": str(exc)}, 400)
             return
         self._json({"error": "not found"}, 404)
+
+    def do_DELETE(self) -> None:
+        parsed = urlparse(self.path)
+        query = parse_qs(parsed.query)
+        try:
+            if parsed.path == "/api/notes":
+                raw = (query.get("id") or [""])[0]
+                if not raw.isdigit():
+                    self._json({"error": "メモの番号がありません"}, 400)
+                    return
+                with connect() as conn:
+                    deleted = delete_note(conn, int(raw))
+                if not deleted:
+                    self._json({"error": "メモがありません"}, 404)
+                    return
+                self._json({"deleted": int(raw)})
+                return
+        except Exception as exc:  # noqa: BLE001
+            self._json({"error": str(exc)}, 400)
+            return
+        self._json({"error": "not found"}, 404)
+
+
 
     def _file(self, path: str) -> None:
         relative = "index.html" if path in {"", "/"} else path.lstrip("/")
